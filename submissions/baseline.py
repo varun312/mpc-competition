@@ -6,18 +6,37 @@ from typing import Any
 import numpy as np
 
 
+# This file is meant to be the starter submission students can edit.
+#
+# The controller below is a simple sampling MPC:
+# 1. Build a small menu of possible controls.
+# 2. Simulate each control for a short horizon.
+# 3. Score each simulated path by goal distance, steering effort, and obstacle risk.
+# 4. Return the first control from the lowest-cost simulated path.
+#
+# There is no optimizer here. The "MPC" part is the repeated predict, score,
+# and execute loop inside act(). This keeps the code easy to change while still
+# giving students the same tuning ideas as a larger MPC controller.
+
+
+# Main prediction settings. Increasing the horizon sees farther ahead, but each
+# act() call tests more simulated steps and may run slower.
 MPC_CONFIG = {
     "dt": 0.1,
     "horizon": 22,
     "near_goal_distance": 1.0,
 }
 
+# Discrete controls to try at every step. A real optimizer would search over a
+# continuous control sequence. This baseline searches a small grid instead.
 CONTROL_GRID = {
     "slow_speeds": [0.0, 0.3, 0.6, 0.9],
     "cruise_speeds": [0.5, 0.9, 1.3, 1.8, 2.3, 2.8],
     "turn_rates": [-1.0, -0.7, -0.4, -0.15, 0.0, 0.15, 0.4, 0.7, 1.0],
 }
 
+# Cost weights. Larger values make that term matter more during rollout
+# scoring. These are the first numbers worth tuning.
 WEIGHTS = {
     "goal_position": 1.6,
     "goal_heading": 0.08,
@@ -30,6 +49,8 @@ WEIGHTS = {
     "stopping": 20.0,
 }
 
+# Clearance bands around obstacles. Positive clearance means no collision.
+# Negative clearance means the robot overlaps the obstacle.
 SAFETY = {
     "near_obstacle_distance": 0.45,
     "far_obstacle_distance": 1.2,
@@ -50,8 +71,9 @@ class Agent:
         best_control = np.array([0.0, 0.0], dtype=float)
         best_cost = float("inf")
 
-        # Sampling MPC: test a small set of constant controls, roll each one
-        # forward, and execute the first control from the cheapest rollout.
+        # This is the receding horizon loop. Each candidate is held constant in
+        # the prediction, but only the first control is used by the simulator.
+        # The next call to act() repeats the search from the new state.
         for candidate_control in candidate_controls(state, goal, control_limits):
             rollout_cost = evaluate_rollout(
                 state,
@@ -78,13 +100,16 @@ def candidate_controls(
     distance_to_goal = float(np.linalg.norm(goal[:2] - state[:2]))
     speeds = CONTROL_GRID["cruise_speeds"]
     if distance_to_goal < float(MPC_CONFIG["near_goal_distance"]):
+        # Close to a waypoint, slower controls reduce overshoot.
         speeds = CONTROL_GRID["slow_speeds"]
 
     target_heading = math.atan2(goal[1] - state[1], goal[0] - state[0])
     heading_error = angle_difference(target_heading, state[2])
     proportional_turn = clamp(2.0 * heading_error, -1.0, 1.0)
 
-    # Try fixed turns and a few turns near the goal-tracking controller.
+    # The fixed grid explores simple turns. The proportional turns bias the
+    # search toward the current waypoint, so the baseline is not pure brute
+    # force.
     turn_rates = set(CONTROL_GRID["turn_rates"])
     turn_rates.add(round(proportional_turn, 3))
     turn_rates.add(round(proportional_turn - 0.35, 3))
@@ -119,6 +144,8 @@ def evaluate_rollout(
     total_cost = 0.0
 
     for step_index in range(1, int(MPC_CONFIG["horizon"]) + 1):
+        # Rate limits matter in this problem, so the predicted control is
+        # ramped exactly like the simulator will ramp it.
         predicted_control = apply_control_limits(
             requested_control, predicted_control, control_limits
         )
@@ -132,6 +159,9 @@ def evaluate_rollout(
 
         prediction_time = step_index * float(MPC_CONFIG["dt"])
         for obstacle in active_obstacles:
+            # Dynamic scenes give obstacle velocity. Predicting moving
+            # obstacles is the main reason this baseline beats a pure waypoint
+            # tracker.
             predicted_obstacle = predict_obstacle(obstacle, prediction_time)
             clearance = rectangle_clearance(
                 predicted_state, predicted_obstacle, robot_radius
@@ -147,6 +177,7 @@ def evaluate_rollout(
 
 
 def get_active_obstacles(observation: dict[str, Any]) -> list[dict[str, float]]:
+    """Return the nearest obstacles selected by the simulator."""
     active_indices = set(observation["active_obstacle_indices"])
     return [
         obstacle
@@ -156,6 +187,7 @@ def get_active_obstacles(observation: dict[str, Any]) -> list[dict[str, float]]:
 
 
 def collision_cost(clearance: float) -> float:
+    """Convert robot-obstacle clearance into a soft penalty."""
     if clearance < 0.0:
         return WEIGHTS["collision"] + WEIGHTS["collision_depth"] * abs(clearance)
     if clearance < SAFETY["near_obstacle_distance"]:
@@ -203,6 +235,7 @@ def apply_control_limits(
 
 
 def step_unicycle(state: np.ndarray, control: np.ndarray) -> np.ndarray:
+    """Advance [x, y, theta] using the unicycle model."""
     time_step = float(MPC_CONFIG["dt"])
     return np.array(
         [
@@ -235,6 +268,9 @@ def predict_obstacle(
 def rectangle_clearance(
     state: np.ndarray, obstacle: dict[str, float], robot_radius: float
 ) -> float:
+    # Work in the obstacle frame so a rotated rectangle can be checked like a
+    # plain rectangle. The signed distance formula then gives positive
+    # clearance outside the rectangle and negative clearance inside it.
     translated_x = state[0] - obstacle["cx"]
     translated_y = state[1] - obstacle["cy"]
     cos_angle = math.cos(-obstacle["angle"])

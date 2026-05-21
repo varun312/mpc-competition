@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-05-14T11:20:32+00:00",
+  "updated_at": "2026-05-21T17:38:16+00:00",
   "entries": [
     {
       "name": "gpt",
@@ -15,8 +15,8 @@
             "path_length": 36.775,
             "minimum_clearance": 0.0,
             "collision_steps": 0,
-            "average_action_time_s": 0.02998,
-            "average_frequency_hz": 33.35,
+            "average_action_time_s": 0.02771,
+            "average_frequency_hz": 36.09,
             "average_speed": 0.965
           }
         },
@@ -29,8 +29,8 @@
             "path_length": 38.275,
             "minimum_clearance": 0.001,
             "collision_steps": 0,
-            "average_action_time_s": 0.0194,
-            "average_frequency_hz": 51.54,
+            "average_action_time_s": 0.01796,
+            "average_frequency_hz": 55.69,
             "average_speed": 0.807
           }
         }
@@ -51,8 +51,8 @@
             "path_length": 36.71,
             "minimum_clearance": 0.0,
             "collision_steps": 0,
-            "average_action_time_s": 0.04591,
-            "average_frequency_hz": 21.78,
+            "average_action_time_s": 0.0481,
+            "average_frequency_hz": 20.79,
             "average_speed": 0.971
           }
         },
@@ -65,8 +65,8 @@
             "path_length": 38.915,
             "minimum_clearance": -0.068,
             "collision_steps": 7,
-            "average_action_time_s": 0.03016,
-            "average_frequency_hz": 33.16,
+            "average_action_time_s": 0.03403,
+            "average_frequency_hz": 29.39,
             "average_speed": 0.828
           }
         }
@@ -87,8 +87,8 @@
             "path_length": 38.38,
             "minimum_clearance": -0.016,
             "collision_steps": 4,
-            "average_action_time_s": 0.06334,
-            "average_frequency_hz": 15.79,
+            "average_action_time_s": 0.06869,
+            "average_frequency_hz": 14.56,
             "average_speed": 0.836
           }
         },
@@ -101,8 +101,8 @@
             "path_length": 36.865,
             "minimum_clearance": -0.201,
             "collision_steps": 20,
-            "average_action_time_s": 0.04355,
-            "average_frequency_hz": 22.96,
+            "average_action_time_s": 0.04755,
+            "average_frequency_hz": 21.03,
             "average_speed": 0.783
           }
         }
@@ -124,7 +124,7 @@
             "minimum_clearance": -0.801,
             "collision_steps": 41,
             "average_action_time_s": 0.0,
-            "average_frequency_hz": 560561.94,
+            "average_frequency_hz": 531337.6,
             "average_speed": 1.3
           }
         },
@@ -138,7 +138,7 @@
             "minimum_clearance": -0.801,
             "collision_steps": 55,
             "average_action_time_s": 0.0,
-            "average_frequency_hz": 680348.88,
+            "average_frequency_hz": 704818.14,
             "average_speed": 1.3
           }
         }
