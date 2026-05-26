@@ -45,14 +45,14 @@ WEIGHTS = {
     "collision": 8000.0,
     "collision_depth": 1600.0,
     "near_obstacle": 18.0,
-    "far_obstacle": 0.8,
+    "far_obstacle": 1.2,
     "stopping": 20.0,
 }
 
 # Clearance bands around obstacles. Positive clearance means no collision.
 # Negative clearance means the robot overlaps the obstacle.
 SAFETY = {
-    "near_obstacle_distance": 0.45,
+    "near_obstacle_distance": 0.50,
     "far_obstacle_distance": 1.2,
 }
 
