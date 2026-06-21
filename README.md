@@ -64,6 +64,11 @@ Run all submissions:
 uv run python -m evaluator.evaluate_all
 ```
 
+Run only your submission:
+```bash
+uv run python -m evaluator.evaluate_all baseline
+```
+
 This writes:
 
 - `leaderboard.json`

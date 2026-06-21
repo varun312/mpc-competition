@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import json
 import subprocess
 import sys
@@ -110,7 +111,42 @@ def write_leaderboard(data: dict[str, Any]) -> None:
         output_file.write("\n")
 
 
-def main() -> None:
+def resolve_submission_path(name: str) -> Path:
+    stem = name[:-3] if name.endswith(".py") else name
+    path = SUBMISSIONS_DIR / f"{stem}.py"
+    if not path.exists():
+        available = ", ".join(candidate.stem for candidate in submission_paths())
+        raise SystemExit(
+            f"No submission named '{stem}'. Available: {available or 'none'}"
+        )
+    return path
+
+
+def visualize_replays(name: str, scenario_names: list[str]) -> list[Path]:
+    # Imported lazily so the batch run does not pull in matplotlib.
+    from evaluator.visualize import plot_replay, render_replay
+
+    artifacts: list[Path] = []
+    for scenario_name in scenario_names:
+        replay_path = OUTPUTS_DIR / "replays" / f"{name}_{scenario_name}.json"
+        if not replay_path.exists():
+            print(
+                f"No replay at {replay_path}; skipping {scenario_name} visualization",
+                file=sys.stderr,
+            )
+            continue
+        with replay_path.open("r", encoding="utf-8") as input_file:
+            replay: dict[str, Any] = json.load(input_file)
+        gif_path = OUTPUTS_DIR / f"{name}_{scenario_name}.gif"
+        plot_path = OUTPUTS_DIR / f"{name}_{scenario_name}.png"
+        render_replay(replay, gif_path)
+        plot_replay(replay, plot_path)
+        artifacts.append(gif_path)
+        artifacts.append(plot_path)
+    return artifacts
+
+
+def evaluate_all() -> None:
     paths = submission_paths()
     results = [run_worker(path) for path in paths]
     leaderboard = merge_leaderboard(results)
@@ -121,7 +157,48 @@ def main() -> None:
     failed = [result for result in results if result.get("status") != "ok"]
     if failed:
         names = ", ".join(str(result["name"]) for result in failed)
-        raise SystemExit(f"Some submissions failed: {names}")
+        print(f"Skipped failed submissions: {names}", file=sys.stderr)
+
+
+def evaluate_one(name: str) -> None:
+    path = resolve_submission_path(name)
+    result = run_worker(path)
+    stem = str(result["name"])
+
+    if result.get("status") != "ok":
+        traceback_text = result.get("traceback")
+        if traceback_text:
+            print(traceback_text, file=sys.stderr)
+        raise SystemExit(f"{stem} failed: {result.get('error') or 'unknown error'}")
+
+    scenarios = result.get("scenarios", {})
+    artifacts = visualize_replays(stem, list(scenarios))
+
+    print(f"{stem}: {float(result['score'])}")
+    for scenario_name, scenario in scenarios.items():
+        print(f"  {scenario_name}: {scenario['score']}")
+    for artifact in artifacts:
+        print(f"  wrote {artifact}")
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Evaluate MPC submissions and update the leaderboard"
+    )
+    parser.add_argument(
+        "submission",
+        nargs="?",
+        help=(
+            "Name of a single submission to evaluate and visualize "
+            "(for example 'baseline'). Omit to evaluate every submission."
+        ),
+    )
+    args = parser.parse_args()
+
+    if args.submission is None:
+        evaluate_all()
+    else:
+        evaluate_one(args.submission)
 
 
 if __name__ == "__main__":
